@@ -1,5 +1,6 @@
 from enum import Enum
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI, status, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -51,6 +52,21 @@ class StandardRes(BaseModel):
   message: str
   data: list[TaskResponse] or None = None
 
+class TaskNotFoundException(Exception):
+  def __init__(self, task_id: int):
+    self.task_id = task_id
+
+@app.exception_handler(TaskNotFoundException)
+def task_not_found_handler(_request: Request, exc: TaskNotFoundException):
+  return JSONResponse (
+    status_code = status.HTTP_404_NOT_FOUND,
+    content = {
+      "status": "Not Found",
+      "message": f"Task not found for id {exc.task_id}.",
+      "data": None,
+    } 
+  )
+ 
 @app.get("/", status_code=status.HTTP_200_OK)
 def server():
   return {
@@ -87,10 +103,7 @@ def get_task(task_id: int):
   filtered_task = [t for t in tasks if t["id"] == task_id]
 
   if len(filtered_task) == 0:
-    raise HTTPException (
-      status_code=status.HTTP_404_NOT_FOUND,
-      detail="data not found",
-    )
+    raise TaskNotFoundException(task_id)
 
   return {
     "status": "Ok",
