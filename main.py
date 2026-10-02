@@ -1,5 +1,5 @@
 from enum import Enum
-from fastapi import FastAPI
+from fastapi import FastAPI, status, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -51,14 +51,14 @@ class StandardRes(BaseModel):
   message: str
   data: list[TaskResponse] or None = None
 
-@app.get("/")
+@app.get("/", status_code=status.HTTP_200_OK)
 def server():
   return {
     "status": "Ok",
     "message": "Server running successfully"
   }
 
-@app.get('/health')
+@app.get('/health', status_code=status.HTTP_200_OK)
 def server_health():
   return {
     "status": "Ok",
@@ -66,7 +66,7 @@ def server_health():
   }
 
 # Todo application
-@app.get('/todo', response_model = StandardRes)
+@app.get('/todo', response_model = StandardRes, status_code=status.HTTP_200_OK)
 def get_all_task(status: TaskStatus = None):
   if status == None:
     return {
@@ -84,14 +84,21 @@ def get_all_task(status: TaskStatus = None):
 
 @app.get('/todo/{task_id}')
 def get_task(task_id: int):
-  filtered_task = [t for t in tasks if t.id == task_id]
+  filtered_task = [t for t in tasks if t["id"] == task_id]
+
+  if len(filtered_task) == 0:
+    raise HTTPException (
+      status_code=status.HTTP_404_NOT_FOUND,
+      detail="data not found",
+    )
+
   return {
     "status": "Ok",
     "message": "Task get success.",
     "data": filtered_task,
   }
 
-@app.post('/todo')
+@app.post('/todo', status_code = status.HTTP_201_CREATED)
 def create_task(task: Task):
   tasks.append(task)
   return {
@@ -101,7 +108,7 @@ def create_task(task: Task):
   }
 
 
-@app.delete('/todo/{task_id}', response_model = StandardRes)
+@app.delete('/todo/{task_id}', response_model = StandardRes, status_code=status.HTTP_200_OK)
 def delete_task(task_id: int):
   for index, task in enumerate(tasks):
     if task.id == task_id:
@@ -115,7 +122,7 @@ def delete_task(task_id: int):
     "message": "Task not deleted. Task not found..",
   }
 
-@app.put('/todo/{task_id}', response_model = StandardRes)
+@app.put('/todo/{task_id}', response_model = StandardRes, status_code=status.HTTP_200_OK)
 def update_task(task_id: int, task: Task):
   for index, task in enumerate(tasks):
     if task.id == task_id:
