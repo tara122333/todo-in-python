@@ -1,5 +1,5 @@
 from enum import Enum
-from fastapi import FastAPI, status, HTTPException, Request
+from fastapi import FastAPI, status, Request, HTTPException, Depends, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -66,7 +66,31 @@ def task_not_found_handler(_request: Request, exc: TaskNotFoundException):
       "data": None,
     } 
   )
- 
+
+def verify_jwt_token(token: str = Header(None)):
+  if token == None or len(token) == 0:
+    return {
+      "status": "UnAuthorize",
+      "message": "Token required"
+    }
+  
+  if token != 'mysecrettoken':
+    return {
+      "status": "UnAuthorize",
+      "message": "Invalid Token"
+    }
+
+  return {
+    "status": "Ok",
+    "message": "Valid Token"
+  }
+
+
+def testing_depends():
+  return {
+    "message-url": "https://www.google.com",
+  }
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def server():
   return {
@@ -82,8 +106,14 @@ def server_health():
   }
 
 # Todo application
-@app.get('/todo', response_model = StandardRes, status_code=status.HTTP_200_OK)
-def get_all_task(status: TaskStatus = None):
+@app.get('/todo', status_code=status.HTTP_200_OK)
+def get_all_task(status: TaskStatus = None, data = Depends(verify_jwt_token)):
+  if data["status"] != 'Ok':
+    raise HTTPException(
+      status_code = 401,
+      detail=data
+    )
+
   if status == None:
     return {
       "status": "Ok",
@@ -99,7 +129,7 @@ def get_all_task(status: TaskStatus = None):
   }
 
 @app.get('/todo/{task_id}')
-def get_task(task_id: int):
+def get_task(task_id: int, data = Depends(testing_depends)):
   filtered_task = [t for t in tasks if t["id"] == task_id]
 
   if len(filtered_task) == 0:
@@ -109,6 +139,7 @@ def get_task(task_id: int):
     "status": "Ok",
     "message": "Task get success.",
     "data": filtered_task,
+    "depends": data,
   }
 
 @app.post('/todo', status_code = status.HTTP_201_CREATED)
