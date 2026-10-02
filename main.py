@@ -41,6 +41,16 @@ class Task(BaseModel):
   description: str
   status: TaskStatus
 
+class TaskResponse(BaseModel):
+  title: str
+  description: str
+  status: TaskStatus
+
+class StandardRes(BaseModel):
+  status: str
+  message: str
+  data: list[TaskResponse] or None = None
+
 @app.get("/")
 def server():
   return {
@@ -56,7 +66,7 @@ def server_health():
   }
 
 # Todo application
-@app.get('/todo')
+@app.get('/todo', response_model = StandardRes)
 def get_all_task(status: TaskStatus = None):
   if status == None:
     return {
@@ -91,7 +101,7 @@ def create_task(task: Task):
   }
 
 
-@app.delete('/todo/{task_id}')
+@app.delete('/todo/{task_id}', response_model = StandardRes)
 def delete_task(task_id: int):
   for index, task in enumerate(tasks):
     if task.id == task_id:
@@ -105,7 +115,7 @@ def delete_task(task_id: int):
     "message": "Task not deleted. Task not found..",
   }
 
-@app.put('/todo/{task_id}')
+@app.put('/todo/{task_id}', response_model = StandardRes)
 def update_task(task_id: int, task: Task):
   for index, task in enumerate(tasks):
     if task.id == task_id:
