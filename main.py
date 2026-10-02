@@ -91,6 +91,25 @@ def testing_depends():
     "message-url": "https://www.google.com",
   }
 
+@app.middleware('http')
+async def verify_jwt_token(request:Request, call_next):
+  paths = request.url.path
+  if paths in ['/private/health']:
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+      return JSONResponse(
+        status_code=401,
+        content={
+          "success": False,
+          "message": "Invalid header or missing header"
+        }
+      )
+    request.state.token = auth_header.split(" ")[1]
+    response = await call_next(request)
+    return response
+  else:
+    return await call_next(request)
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def server():
   return {
@@ -178,4 +197,13 @@ def update_task(task_id: int, task: Task):
   return {
     "status": "Failed",
     "message": "Task not found. Task not updated.",
+  }
+
+
+@app.get('/private/health')
+def private_health(request: Request):
+  return {
+    "status": "Ok",
+    "message": "Server health is ok",
+    "data": request.state.token,
   }
