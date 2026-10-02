@@ -3,6 +3,7 @@ from config import get_app_config
 from db import create_mongo_client, TODOS_COLLECTION
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pymongo import DESCENDING
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
