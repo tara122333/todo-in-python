@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status, HTTPException
-from schemas import TaskCreate, TaskResponse
-from task import create_task_db, get_all_task_db, get_task_db, delete_task_db
+from schemas import TaskCreate, TaskResponse, TaskUpdate
+from task import create_task_db, get_all_task_db, get_task_db, delete_task_db, update_task_db
 from typing import Annotated
 from fastapi import Depends
 from typing import Any
@@ -37,5 +37,20 @@ async def delete_task(task_id: str, task_collection: Tasks) -> dict:
   task_data = await delete_task_db(task_collection, task_id)
   if task_data is None:
     raise _task_not_found(task_id)
+  else:
+    return task_data
+
+@task_router.patch("/{task_id}", status_code=status.HTTP_200_OK, response_model=TaskResponse)
+async def update_task(payload: TaskUpdate, task_id: str, task_collection: Tasks) -> dict:
+  payload_fields = payload.model_dump(mode="json", exclude_unset=True)
+  task_data = None
+
+  if payload_fields:
+    task_data = await update_task_db(task_collection, task_id, payload_fields)
+  else:
+    task_data = await get_task(task_id, task_collection)
+  
+  if task_data is None:
+    raise _task_not_found()
   else:
     return task_data

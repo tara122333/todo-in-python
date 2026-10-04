@@ -35,3 +35,15 @@ class TaskResponse(BaseModel):
   status: TaskStatus
   created_at: datetime
   updated_at: datetime
+
+class TaskUpdate(BaseModel):
+  title: str = Field(min_length=1, max_length=200, examples=["Buy tea"])
+  description: Optional[str] = Field(default=None, max_length=2000, examples=['100 gms'])
+  status: TaskStatus = None
+
+  _description = field_validator("description")(_clean_description)
+
+  @field_validator("title")
+  @classmethod
+  def _title(cls, value: Optional[str]) -> Optional[str]:
+      return None if value is None else _clean_title(value)
