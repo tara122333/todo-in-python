@@ -1,9 +1,10 @@
 from fastapi import FastAPI, status
 from config import get_app_config
-from db import create_mongo_client, TODOS_COLLECTION
+from db import create_mongo_client, TASKS_COLLECTION
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pymongo import DESCENDING
+from task_routes import task_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -11,7 +12,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     client = create_mongo_client(app_config)
     await client.admin.command("ping")  # fail fast if MongoDB is unreachable
     db = client[app_config.mongo_db_name]
-    await db[TODOS_COLLECTION].create_index([("created_at", DESCENDING)])
+    await db[TASKS_COLLECTION].create_index([("created_at", DESCENDING)])
     app.state.db = db
     try:
         yield
@@ -25,7 +26,7 @@ app = FastAPI(
   description=app_config.description,
   lifespan=lifespan,
 )
-
+app.include_router(task_router)
 
 @app.get("/", include_in_schema=False)
 def server():
@@ -35,9 +36,9 @@ def server():
     "data": app_config
   }
 
-@app.get('/health', status_code=status.HTTP_200_OK)
-def server_health():
-  return {
-    "status": "Ok",
-    "message": "Server health is ok"
-  }
+# @app.get('/health', status_code=status.HTTP_200_OK)
+# def server_health():
+#   return {
+#     "status": "Ok",
+#     "message": "Server health is ok"
+#   }
