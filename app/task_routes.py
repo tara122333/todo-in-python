@@ -1,7 +1,7 @@
-from fastapi import APIRouter, status, HTTPException
-from schemas import TaskCreate, TaskResponse, TaskUpdate
+from fastapi import APIRouter, status, HTTPException, Query
+from schemas import TaskCreate, TaskResponse, TaskUpdate, TaskStatus, TaskOrderBy
 from task import create_task_db, get_all_task_db, get_task_db, delete_task_db, update_task_db
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import Depends
 from typing import Any
 from pymongo.asynchronous.collection import AsyncCollection
@@ -29,8 +29,23 @@ async def get_task(task_id: str, task_collection: Tasks) -> dict:
     return task_data
 
 @task_router.get("/", status_code=status.HTTP_200_OK)
-async def get_all_task(task_collection: Tasks) -> list[dict[str, Any]]:
-  return await get_all_task_db(task_collection)
+async def get_all_task(
+  task_collection: Tasks,
+  limit: Annotated[int, Query(ge=1, le=100)] = 10,
+  page: Annotated[int, Query(ge=1)] = 1,
+  status: Annotated[Optional[TaskStatus], Query(alias="status")] = None,
+  title: Annotated[Optional[str], Query(alias="title")] = None,
+  order: Annotated[Optional[TaskOrderBy], Query(alias="order")] = None
+) -> dict:
+  all_task, total = await get_all_task_db(
+    task_collection,
+    limit,
+    status,
+    title,
+    order,
+    skip=(page - 1) * limit,
+  )
+  return {"items": all_task, "total": total, "page": page, "limit": limit}
 
 @task_router.delete("/{task_id}", status_code=status.HTTP_200_OK)
 async def delete_task(task_id: str, task_collection: Tasks) -> dict:

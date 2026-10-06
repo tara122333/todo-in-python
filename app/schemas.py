@@ -8,6 +8,10 @@ class TaskStatus(str, Enum):
   COMPLETED = 'completed'
   DELETED = 'deleted'
 
+class TaskOrderBy(str, Enum):
+  ASC = 'asc'
+  DESC = 'desc'
+
 def _clean_title(value: str) -> str:
   value = value.strip()
   if not value:

@@ -3,8 +3,9 @@ from pymongo.asynchronous.collection import AsyncCollection
 from datetime import datetime, timezone
 from typing import Optional
 from bson import ObjectId
+import asyncio
 from schemas import TaskStatus, TaskUpdate
-from pymongo import ReturnDocument
+from pymongo import ReturnDocument, DESCENDING, ASCENDING
 
 def _now() -> datetime:
     now = datetime.now(timezone.utc)
@@ -31,12 +32,34 @@ async def create_task_db(task_collection: AsyncCollection, data: dict[str, Any])
     doc["_id"] = result.inserted_id
     return _serialize(doc)
 
-async def get_all_task_db(task_collection: AsyncCollection) -> list[dict[str, Any]]:
-    cursor = task_collection.find()
-    all_task = []
-    async for doc in cursor:
-        all_task.append(_serialize(doc))
-    return all_task
+async def get_all_task_db(
+    task_collection: AsyncCollection,
+    limit: int,
+    status: Optional[str],
+    title: str,
+    order: Optional[str],
+    skip: int = 0,
+) -> tuple[list[dict[str, Any]]]:
+    query: dict[str, Any] = {}
+    if status:
+        query["status"] = status
+
+    if title:
+        query["title"] = {"$regex": title, "$options": "i"}
+
+    order_by = DESCENDING
+
+    if order:
+        if order == 'asc':
+            order_by = ASCENDING
+
+    cursor = task_collection.find(query).sort([("created_at", order_by)])
+    docs, total = await asyncio.gather(
+        cursor.skip(skip).limit(limit).to_list(),
+        task_collection.count_documents(query),
+    )
+
+    return [_serialize(doc) for doc in docs], total
 
 async def get_task_db(task_collection: AsyncCollection, task_id: str) -> Optional[dict[str, Any]]:
     valid_task_id = _object_id(task_id)
