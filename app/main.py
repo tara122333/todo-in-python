@@ -5,6 +5,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pymongo import DESCENDING
 from task_routes import task_router
+from user_routes import user_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -27,6 +28,7 @@ app = FastAPI(
   lifespan=lifespan,
 )
 app.include_router(task_router)
+app.include_router(user_router)
 
 @app.get("/", include_in_schema=False)
 def server():
